@@ -1,0 +1,10 @@
+[project]
+name = "myvastai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "packaging>=26.2",
+    "vastai>=1.0.13",
+]
