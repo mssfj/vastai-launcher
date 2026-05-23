@@ -94,6 +94,7 @@ Upon successful connection, the following files are available in the remote `~/`
 
 - `instance.info`: Contains metadata such as Instance ID, Price, Network Speed, and Driver versions.
 - `~/.codex/auth.json`: Mirrored from your local `$HOME/.codex/auth.json` (useful for private API access from the instance).
+- `~/.git-credentials`: Mirrored from your local `$HOME/.git-credentials`. If present, the script automatically configures `git credential.helper store` and synchronizes your local `user.name` and `user.email` to the remote instance.
 
 ## Important Notes
 

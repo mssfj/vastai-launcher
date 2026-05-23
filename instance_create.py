@@ -34,7 +34,7 @@ offers = vast.search_offers(
         "cuda_vers >= 13.0"
     ),
     order="dph_total",
-    type="bid",
+    type="ondemand",
     limit="50",
     storage=150,
 )
@@ -88,16 +88,15 @@ for offer in display_offers:
 # ループ処理の中でオファーごとのIDと価格を取得
 for offer in filtered_offers:
     OFFER_ID = offer.get('id')
-    bid_price = offer.get('dph_total') # 🛠️ オファーに提示されている最低入札価格を取得
+    on_demand_price = offer.get('dph_total')
 
-    print(f"\nCreating interruptible instance with OFFER_ID: {OFFER_ID} at ${bid_price}/hr", file=sys.stderr)
+    print(f"\nCreating on-demand instance with OFFER_ID: {OFFER_ID} at ${on_demand_price}/hr", file=sys.stderr)
 
     try:
         result = vast.create_instance(
             id=OFFER_ID,
             image="nvcr.io/nvidia/pytorch:26.04-py3",
             disk=150,
-            price=bid_price, # 🛠️ 必須: 1時間あたりの入札価格（ドル）を指定
             onstart_cmd="echo hello && nvidia-smi",
             runtype="ssh_direc ssh_proxy",
         )
@@ -124,7 +123,29 @@ for offer in filtered_offers:
             print(f"Status: {status} | Detail: {status_msg}", file=sys.stderr)
 
             if status == "running":
-                time.sleep(10)  # ← ここで少し待つ時間を設ける
+                # ダイレクト接続情報が取得できるまで少し待つ
+                # 10秒毎に12回 (最大120秒) 待機するように延長
+                for i in range(12): 
+                    # 1. direct_ip_ssh フィールドを確認
+                    if info.get("direct_ip_ssh") and info.get("direct_port_ssh"):
+                        print(f"\nDirect SSH info found (direct_ip_ssh) after {i*10}s.", file=sys.stderr)
+                        break
+                    
+                    # 2. public_ipaddr と ports["22/tcp"] を確認
+                    if info.get("public_ipaddr") and info.get("ports"):
+                        ssh_ports = info.get("ports", {}).get("22/tcp", [])
+                        if ssh_ports:
+                            print(f"\nDirect SSH info found (public_ipaddr) after {i*10}s.", file=sys.stderr)
+                            break
+
+                    print(f"Waiting for direct SSH info... ({i+1}/12)", file=sys.stderr)
+                    time.sleep(10)
+                    info = vast.show_instance(id=instance_id)
+                    if isinstance(info, list):
+                        info = info[0] if info else {}
+                else:
+                    print("\nDirect SSH info not found after 120s. Falling back to Proxy.", file=sys.stderr)
+                
                 success = True
                 break
 
@@ -171,7 +192,26 @@ for offer in filtered_offers:
             print("-" * 30, file=sys.stderr)
             
             # Output details to stdout for the Bash script to capture
-            ssh_url = vast.ssh_url(id=instance_id)
+            ssh_host = info.get("ssh_host")
+            ssh_port = info.get("ssh_port")
+            direct_ip = info.get("direct_ip_ssh")
+            direct_port = info.get("direct_port_ssh")
+
+            # Fallback to public_ipaddr and ports if direct_ip_ssh is not there
+            if not direct_ip and info.get("public_ipaddr") and info.get("ports"):
+                ports = info.get("ports", {})
+                ssh_ports = ports.get("22/tcp", [])
+                if ssh_ports:
+                    direct_ip = info.get("public_ipaddr")
+                    direct_port = ssh_ports[0].get("HostPort")
+
+            if direct_ip and direct_port:
+                ssh_url = f"ssh://root@{direct_ip}:{direct_port}"
+                print(f"  SSH (Direct): {direct_ip}:{direct_port}", file=sys.stderr)
+            else:
+                ssh_url = vast.ssh_url(id=instance_id)
+                print(f"  SSH (Proxy):  {ssh_host}:{ssh_port}", file=sys.stderr)
+            
             price = offer.get('dph_total', 0)
             inet_up = offer.get('inet_up', 0)
             inet_down = offer.get('inet_down', 0)
