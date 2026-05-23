@@ -1,8 +1,8 @@
-Instance ID:   37421033
-SSH Host:      185.61.165.201
-SSH Port:      32198
-Price:         $0.7083333333333333/h
-Net Speed:     Up: 1340.9Mbps / Down: 4201.3Mbps
-NVIDIA Driver: 580.159.04
-CUDA Version:  13.0
-Location:      United Kingdom, GB
+Instance ID:   37428700
+SSH Host:      136.59.129.136
+SSH Port:      34820
+Price:         $0.8555555555555555/h
+Net Speed:     Up: 5329.3Mbps / Down: 6396.7Mbps
+NVIDIA Driver: 590.48.01
+CUDA Version:  13.1
+Location:      Utah, US

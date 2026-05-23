@@ -51,19 +51,13 @@ CUDA Version:  $CUDA
 Location:      $LOCATION
 EOF
 
-# ファイルの転送処理 (auth.json と instance.info)
+# ファイルの転送処理 (instance.info と Git 認証情報)
 echo "インスタンスの起動完了を待っています (最大120秒)..." >&2
 
 MAX_RETRIES=24
 RETRY_COUNT=0
-SUCCESS_AUTH=false
 SUCCESS_INFO=false
 SUCCESS_GIT=false
-
-if [ ! -f "$HOME/.codex/auth.json" ]; then
-    echo "注意: ローカルに $HOME/.codex/auth.json が見つからないため、転送をスキップします。" >&2
-    SUCCESS_AUTH=true # スキップするので成功扱い
-fi
 
 if [ ! -f "$HOME/.git-credentials" ]; then
     echo "注意: ローカルに $HOME/.git-credentials が見つからないため、GitHub認証情報の転送をスキップします。" >&2
@@ -79,15 +73,6 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         if scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P "$SSH_PORT" instance.info root@"$SSH_HOST":~/instance.info > /dev/null 2>&1; then
             echo "instance.info の転送に成功しました。" >&2
             SUCCESS_INFO=true
-        fi
-
-        # auth.json の転送 (存在する場合のみ)
-        if [ "$SUCCESS_AUTH" = false ]; then
-            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@"$SSH_HOST" -p "$SSH_PORT" "mkdir -p ~/.codex" > /dev/null 2>&1
-            if scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P "$SSH_PORT" "$HOME/.codex/auth.json" root@"$SSH_HOST":~/.codex/auth.json > /dev/null 2>&1; then
-                echo "auth.json の転送に成功しました。" >&2
-                SUCCESS_AUTH=true
-            fi
         fi
 
         # GitHub 認証情報と設定の転送 (存在する場合のみ)
@@ -108,7 +93,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             fi
         fi
 
-        if [ "$SUCCESS_INFO" = true ] && [ "$SUCCESS_AUTH" = true ] && [ "$SUCCESS_GIT" = true ]; then
+        if [ "$SUCCESS_INFO" = true ] && [ "$SUCCESS_GIT" = true ]; then
             break
         fi
     fi
@@ -119,9 +104,6 @@ done
 
 if [ "$SUCCESS_INFO" = false ]; then
     echo "エラー: instance.info の転送に失敗しました。" >&2
-fi
-if [ "$SUCCESS_AUTH" = false ]; then
-    echo "エラー: auth.json の転送に失敗しました。" >&2
 fi
 if [ "$SUCCESS_GIT" = false ]; then
     echo "エラー: Git 認証情報の転送に失敗しました。" >&2
