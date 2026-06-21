@@ -25,7 +25,7 @@ def has_required_cuda(offer):
 # インスタンスの検索
 offers = vast.search_offers(
     query=(
-        "gpu_name=RTX_4090 "
+        "gpu_name=RTX_5090 "
         "num_gpus=1 "
         "verified=true "
         "direct_port_count>=1 "
@@ -36,7 +36,7 @@ offers = vast.search_offers(
     order="dph_total",
     type="ondemand",
     limit="50",
-    storage=150,
+    storage=200,
 )
 
 # 信頼度が 90% 以上、かつ通信速度が 500Mbps 以上のものをフィルタリング

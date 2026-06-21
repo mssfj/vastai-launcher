@@ -12,9 +12,20 @@ if [ -z "$INSTANCE_ID" ] || [ -z "$SSH_URL" ]; then
     exit 1
 fi
 
+# インスタンス破棄の前に確認するかどうかのフラグ
+ASK_BEFORE_DESTROY=false
+
 # インスタンス破棄用のクリーンアップ関数
 cleanup() {
     if [ -n "$INSTANCE_ID" ]; then
+        if [ "$ASK_BEFORE_DESTROY" = true ]; then
+            echo "" >&2
+            read -p "接続に失敗しました。インスタンス $INSTANCE_ID を破棄しますか？ (y/N): " CONFIRM < /dev/tty
+            if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+                echo "インスタンス $INSTANCE_ID を保持しました。手動で破棄してください: ./.venv/bin/vastai destroy instance $INSTANCE_ID" >&2
+                return
+            fi
+        fi
         echo "インスタンス $INSTANCE_ID を破棄しています..." >&2
         ./.venv/bin/vastai destroy instance "$INSTANCE_ID" -y > /dev/null 2>&1
     fi
@@ -128,6 +139,7 @@ while true; do
 
     if [ "$RETRY_DONE" = true ]; then
         echo "再接続試行後も接続が維持できませんでした (Exit code: $SSH_EXIT_CODE)。" >&2
+        ASK_BEFORE_DESTROY=true
         break
     fi
 
